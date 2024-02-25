@@ -3,7 +3,7 @@ import Calendar from "react-calendar";
 import "react-calendar/dist/Calendar.css";
 import axios from "axios";
 import "./CustomCalendar.css";
-import "./App.css"; // Importa el archivo de estilos CSS 
+import "./App.css"; // Importa el archivo de estilos CSS
 
 const Agenda = () => {
   const [selectedDate, setSelectedDate] = useState(null);
@@ -19,8 +19,6 @@ const Agenda = () => {
   });
   const contextMenuRef = useRef(null);
   const [isEditing, setIsEditing] = useState(false);
-  const [availableTimes, setAvailableTimes] = useState([]); // Add this line
-
   /*===============================================*/
   // Formatear la hora recibida del backend (hora en formato HH:MM:SS) a HH:MM
   const formatTime = (timeString) => {
@@ -36,39 +34,36 @@ const Agenda = () => {
       day < 10 ? "0" : ""
     }${day}`;
   };
-  const loadAppointments = useCallback(
-    (fecha) => {
-      if (!selectedDate) return; // Salir si no hay fecha seleccionada
+  const loadAppointments = useCallback((fecha) => {
+    if (!selectedDate) return; // Salir si no hay fecha seleccionada
 
-      const formattedDate = formatDate(selectedDate);
+    const formattedDate = formatDate(selectedDate);
 
-      axios
-        .get(`http://localhost:5000/getCitas/${formattedDate}`)
-        .then((response) => {
-          // Verificar si las citas son diferentes antes de actualizar el estado
-          if (JSON.stringify(response.data) !== JSON.stringify(appointments)) {
-            setAppointments(response.data);
-            console.log("Citas cargadas:", response.data);
-          }
-        })
-        .catch((error) => {
-          const { status, data } = error.response;
+    axios
+      .get(`http://localhost:5000/getCitas/${formattedDate}`)
+      .then((response) => {
+        // Verificar si las citas son diferentes antes de actualizar el estado
+        if (JSON.stringify(response.data) !== JSON.stringify(appointments)) {
+          setAppointments(response.data);
+          console.log("Citas cargadas:", response.data);
+        }
+      })
+      .catch((error) => {
+        const { status, data } = error.response;
 
-          // Manejar el error 404
-          if (status === 404) {
-            // Mostrar un mensaje al usuario indicando que no hay citas para la fecha seleccionada
-            console.log("No hay citas para la fecha:", data.message);
-            // Limpiar la lista de citas
-            setAppointments([]);
-          } else {
-            // Manejar otros errores
-            console.error("Error al cargar las citas:", error);
-            alert("Error al cargar las citas");
-          }
-        });
-    },
-    [appointments, selectedDate]
-  );
+        // Manejar el error 404
+        if (status === 404) {
+          // Mostrar un mensaje al usuario indicando que no hay citas para la fecha seleccionada
+          console.log("No hay citas para la fecha:", data.message);
+          // Limpiar la lista de citas
+          setAppointments([]);
+        } else {
+          // Manejar otros errores
+          console.error("Error al cargar las citas:", error);
+          alert("Error al cargar las citas");
+        }
+      });
+  }, [appointments,selectedDate]);
 
   const handleNameUpdate = (selectedtime, newName) => {
     if (!selectedName || !selectedDate || !selectedTime || !newName) {
@@ -131,43 +126,10 @@ const Agenda = () => {
     } else if (option === "B") {
       deleteAppointment();
     } else if (option === "C") {
-      setAvailableTimes(
-        timeSlots.filter((time) =>
-          appointments.every(
-            (appointment) => formatTime(appointment.hora) !== time
-          )
-        )
-      );
+      // Tu código para la opción C
     }
   };
-  const handleTimeSelection = (time) => {
-    if (!selectedName || !selectedDate || !selectedTime) {
-      alert(
-        "Por favor seleccione una cita para editar y complete los campos requeridos"
-      );
-      return;
-    }
 
-    const data = {
-      fecha: formatDate(selectedDate),
-      horaVieja: selectedTime,
-      horaNueva: time,
-      nombre: selectedName,
-    };
-
-    axios
-      .put("http://localhost:5000/moverCita", data)
-      .then((response) => {
-        console.log(response.data);
-        loadAppointments(formatDate(selectedDate)); // Actualizar citas después de mover
-        setIsEditing(false); // Desactivar modo edición
-        setPatientName(""); // Limpiar nombre del paciente
-      })
-      .catch((error) => {
-        console.error("Error al mover la cita:", error);
-        alert("Error al mover la cita");
-      });
-  };
   const closeContextMenu = useCallback(() => {
     setContextMenuVisible(false);
   }, []);
@@ -219,6 +181,7 @@ const Agenda = () => {
   });
   const generateTimeSlotsRef = useRef(generateTimeSlots);
 
+  
   const handleNameClick = (name, time) => {
     setSelectedName(name);
     setSelectedTime(time);
@@ -420,34 +383,17 @@ const Agenda = () => {
                   top: contextMenuPosition.y,
                   left: contextMenuPosition.x,
                 }}
-                onClick={(e) => e.stopPropagation()} //Evitar cierre al hacer clic dentro
+                onClick={(e) => e.stopPropagation()} // Prevent closing when clicked inside
               >
                 <div onClick={() => handleContextMenuOptionClick("A")}>
-                  Editar
+                  editar
                 </div>
                 <div onClick={() => handleContextMenuOptionClick("B")}>
-                  Eliminar
+                  eliminar
                 </div>
-                {availableTimes.length > 0 && (
-                  <div>
-                    <span>Seleccionar nuevo horario:</span>
-                    <select
-                      onChange={(e) => handleTimeSelection(e.target.value)}
-                    >
-                      <option value="">Seleccionar</option>
-                      {availableTimes.map((time, index) => (
-                        <option key={index} value={time}>
-                          {time}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                )}
-               {availableTimes.length === 0 && (
-                  <div onClick={() => handleContextMenuOptionClick("C")}>
-                    Opción C
-                  </div>
-                )}
+                <div onClick={() => handleContextMenuOptionClick("C")}>
+                  Option C
+                </div>
               </div>
             )}
           </div>
