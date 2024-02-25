@@ -1,0 +1,51 @@
+/* Estilos personalizados para el calendario */
+.custom-calendar {
+  width: 400px; /* Ancho personalizado */
+  height: 300px; /* Alto personalizado */
+}
+
+.react-calendar__month-view__weekdays__weekday {
+  font-size: 15px; /* Ajusta el tamaño según lo necesites */
+  align-items: center;
+  padding: 10px 6.6667px;
+}
+
+.custom-tile {
+  font-size: 18px; /* Tamaño de fuente personalizado para los números de día */
+   
+  line-height: 20px;
+  
+}
+
+
+.time-slot {
+  display: flex;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.appointment-container {
+  flex-grow: 1;
+  display: flex;
+  align-items: center;
+}
+
+.appointment {
+  margin-right: 10px;
+  padding: 5px 10px;
+  background-color: #f0f0f0;
+  border-radius: 5px;
+  cursor: grab;
+}
+
+.appointment:hover {
+  background-color: #e0e0e0;
+}
+
+.appointment:active {
+  cursor: grabbing;
+}
+ 
+.calendar-container {
+  margin-top: 80px; /* Ajusta el valor según sea necesario */
+}

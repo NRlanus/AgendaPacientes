@@ -1,0 +1,27 @@
+.container {
+  display: flex;
+  background-color: black;
+}
+
+.left {
+  flex: 1;
+  align-self:center;
+  font-size:3cm;
+  color: #ffffff;
+  
+}
+
+.right {
+  flex: 1;
+  align-self: center;
+  font-size: 2cm;
+  line-height:0.4cm;
+  color: #ffffff;
+   
+}
+
+.item {
+  padding: 10px;
+  margin: 5px;
+  border: 1px solid #ccc;
+}
