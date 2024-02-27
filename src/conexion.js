@@ -174,6 +174,7 @@ const createTableQuery = `
 // Ruta para guardar un nuevo paciente
 app.post('/guardarPaciente', (req, res) => {
   const { fecha, hora, nombre } = req.body;
+  console.log("fecha hora y nombre en guardarPaciente: ", fecha, hora, nombre);
   const [dia, mes, año] = fecha.split('/');
  
   // Insertar el paciente en la tabla A2024

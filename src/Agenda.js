@@ -19,6 +19,10 @@ const Agenda = () => {
   });
   const contextMenuRef = useRef(null);
   const [isEditing, setIsEditing] = useState(false);
+  const [namesCount, setNamesCount] = useState(0); // Estado para almacenar la cantidad de nombres
+
+ 
+  
   /*===============================================*/
   // Formatear la hora recibida del backend (hora en formato HH:MM:SS) a HH:MM
   const formatTime = (timeString) => {
@@ -126,8 +130,15 @@ const Agenda = () => {
     } else if (option === "B") {
       deleteAppointment();
     } else if (option === "C") {
-      // Tu código para la opción C
-    }
+     // Copiar el nombre seleccionado al portapapeles
+     navigator.clipboard.writeText(selectedName).then(() => {
+      console.log("Nombre copiado al portapapeles:", selectedName);
+      deleteAppointment(selectedName);
+    }).catch((error) => {
+      console.error("Error al copiar al portapapeles:", error);
+      alert("Error al copiar al portapapeles");
+    });
+  }
   };
 
   const closeContextMenu = useCallback(() => {
@@ -168,20 +179,29 @@ const Agenda = () => {
 
     setTimeSlots(timeOptions);
   }, [selectedDate]);
+/////// USEEFECTS======================================================
+useEffect(() => {
+  // Contar la cantidad de nombres en la lista de citas
+  const count = appointments.length;
+  // Actualizar el estado con la nueva cantidad
+  setNamesCount(count);
+}, [appointments]);
+  
 
   useEffect(() => {
     if (selectedDate) {
-      loadAppointments(formatDate(selectedDate));
       generateTimeSlots();
+      loadAppointments();
     }
-  }, [selectedDate, generateTimeSlots, loadAppointments]);
+  }, [selectedDate, generateTimeSlots ]);
+
 
   useEffect(() => {
     generateTimeSlotsRef.current = generateTimeSlots;
   });
   const generateTimeSlotsRef = useRef(generateTimeSlots);
 
-  
+  //==================================================================
   const handleNameClick = (name, time) => {
     setSelectedName(name);
     setSelectedTime(time);
@@ -269,6 +289,7 @@ const Agenda = () => {
           className="custom-calendar"
           tileClassName="custom-tile"
         />
+        <p>Pacientes agendados: {namesCount}</p> {/* Mostrar la cantidad de nombres */}
       </div>
       <div className="detail-container" style={{ marginLeft: "40px" }}>
         {selectedDate && (
@@ -314,7 +335,7 @@ const Agenda = () => {
               className="name-list-container"
               onClick={() => setSelectedName("")}
             >
-              <ul class="time-list">
+              <ul className="time-list">
                 {timeSlots.map((timeSlot, index) => (
                   <li key={index}>
                     <span>{timeSlot}</span>
