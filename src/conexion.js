@@ -173,17 +173,17 @@ const createTableQuery = `
 
 // Ruta para guardar un nuevo paciente
 app.post('/guardarPaciente', (req, res) => {
-  const { fecha, hora, nombre } = req.body;
-  console.log("fecha hora y nombre en guardarPaciente: ", fecha, hora, nombre);
+  const { fecha, hora, nombre,oSocial } = req.body;
+  console.log("fecha hora y nombre en guardarPaciente: ", fecha, hora, nombre,oSocial);
   const [dia, mes, año] = fecha.split('/');
  
   // Insertar el paciente en la tabla A2024
   const insertQuery = `
-    INSERT INTO A2024 (fecha, hora, nombre)
-    VALUES (?, ?, ?)
+    INSERT INTO A2024 (fecha, hora, nombre, oSocial)
+    VALUES (?, ?, ?, ?)
   `;
 
-  connection.query(insertQuery, [fecha , hora, nombre], (error, results) => {
+  connection.query(insertQuery, [fecha , hora, nombre,oSocial], (error, results) => {
     if (error) {
       console.error('Error al guardar el paciente:', error);
       res.status(500).json({ error: 'Error al guardar el paciente' });
@@ -200,7 +200,7 @@ app.get('/getCitas/:fecha', (req, res) => {
   const fecha = req.params.fecha;
 
   const query = `
-    SELECT hora, nombre FROM A2024 
+    SELECT hora, nombre, oSocial FROM A2024 
     WHERE fecha = ? 
     ORDER BY hora
   `;
@@ -224,13 +224,13 @@ app.get('/getCitas/:fecha', (req, res) => {
 
 // Ruta para actualizar el nombre de la cita
 app.put('/actualizarNombre', (req, res) => {
-  const { fecha, hora, nuevoNombre } = req.body;
-console.log(fecha, hora, nuevoNombre)
+  const { fecha, hora, nuevoNombre, nuevaOsocial } = req.body;
+console.log(fecha, hora, nuevoNombre,nuevaOsocial)
   // Consulta SQL para actualizar el nombre de la cita
-  const sql = `UPDATE a2024 SET nombre = ?, hora = ? WHERE fecha = ?`;
+  const sql = `UPDATE a2024 SET nombre = ?, hora = ?, oSocial = ? WHERE fecha = ?`;
 
   // Ejecutar la consulta SQL con los parámetros
-  connection.query(sql, [nuevoNombre, hora, fecha], (err, result) => {
+  connection.query(sql, [nuevoNombre, hora, nuevaOsocial, fecha], (err, result) => {
     if (err) {
       console.error('Error al actualizar el nombre de la cita:', err);
       res.status(500).send('Error al actualizar el nombre de la cita');
@@ -244,10 +244,10 @@ console.log(fecha, hora, nuevoNombre)
 
 //ELIMINAR UN NOMBRE DE LA AGENDA=========================
 app.delete('/eliminarCita', (req, res) => {
-  const { fecha, hora, nombre } = req.body;
-console.log(fecha, hora, nombre);
-  const sql = `DELETE FROM a2024 WHERE fecha = ? AND hora = ? AND nombre = ?`;
-  connection.query(sql, [fecha, hora, nombre], (err, result) => {
+  const { fecha, hora, nombre, oSocial } = req.body;
+console.log(fecha, hora, nombre, oSocial);
+  const sql = `DELETE FROM a2024 WHERE fecha = ? AND hora = ? AND nombre = ? And oSocial = ?`;
+  connection.query(sql, [fecha, hora, nombre, oSocial], (err, result) => {
     if (err) {
       console.error('Error al eliminar la cita:', err);
       res.status(500).json({ error: 'Error al eliminar la cita' });

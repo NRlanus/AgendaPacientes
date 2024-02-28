@@ -20,9 +20,11 @@ const Agenda = () => {
   const contextMenuRef = useRef(null);
   const [isEditing, setIsEditing] = useState(false);
   const [namesCount, setNamesCount] = useState(0); // Estado para almacenar la cantidad de nombres
+  const [patientType, setPatientType] = useState("");
+  const [selectedPatientType, setSelectedPatientType] = useState("");
 
- 
-  
+
+
   /*===============================================*/
   // Formatear la hora recibida del backend (hora en formato HH:MM:SS) a HH:MM
   const formatTime = (timeString) => {
@@ -38,39 +40,42 @@ const Agenda = () => {
       day < 10 ? "0" : ""
     }${day}`;
   };
-  const loadAppointments = useCallback((fecha) => {
-    if (!selectedDate) return; // Salir si no hay fecha seleccionada
+  const loadAppointments = useCallback(
+    (fecha) => {
+      if (!selectedDate) return; // Salir si no hay fecha seleccionada
 
-    const formattedDate = formatDate(selectedDate);
+      const formattedDate = formatDate(selectedDate);
 
-    axios
-      .get(`http://localhost:5000/getCitas/${formattedDate}`)
-      .then((response) => {
-        // Verificar si las citas son diferentes antes de actualizar el estado
-        if (JSON.stringify(response.data) !== JSON.stringify(appointments)) {
-          setAppointments(response.data);
-          console.log("Citas cargadas:", response.data);
-        }
-      })
-      .catch((error) => {
-        const { status, data } = error.response;
+      axios
+        .get(`http://localhost:5000/getCitas/${formattedDate}`)
+        .then((response) => {
+          // Verificar si las citas son diferentes antes de actualizar el estado
+          if (JSON.stringify(response.data) !== JSON.stringify(appointments)) {
+            setAppointments(response.data);
+            console.log("Citas cargadas:", response.data);
+          }
+        })
+        .catch((error) => {
+          const { status, data } = error.response;
 
-        // Manejar el error 404
-        if (status === 404) {
-          // Mostrar un mensaje al usuario indicando que no hay citas para la fecha seleccionada
-          console.log("No hay citas para la fecha:", data.message);
-          // Limpiar la lista de citas
-          setAppointments([]);
-        } else {
-          // Manejar otros errores
-          console.error("Error al cargar las citas:", error);
-          alert("Error al cargar las citas");
-        }
-      });
-  }, [appointments,selectedDate]);
+          // Manejar el error 404
+          if (status === 404) {
+            // Mostrar un mensaje al usuario indicando que no hay citas para la fecha seleccionada
+            console.log("No hay citas para la fecha:", data.message);
+            // Limpiar la lista de citas
+            setAppointments([]);
+          } else {
+            // Manejar otros errores
+            console.error("Error al cargar las citas:", error);
+            alert("Error al cargar las citas");
+          }
+        });
+    },
+    [appointments, selectedDate]
+  );
 
-  const handleNameUpdate = (selectedtime, newName) => {
-    if (!selectedName || !selectedDate || !selectedTime || !newName) {
+  const handleNameUpdate = (selectedtime, newName, newPatientType) => {
+    if (!selectedName || !selectedDate || !selectedTime || !newName ) {
       alert(
         "Por favor seleccione una cita para editar y complete los campos requeridos"
       );
@@ -91,7 +96,9 @@ const Agenda = () => {
       fecha: formatDate(selectedDate),
       hora: selectedTime,
       nuevoNombre: newName,
+      nuevaOsocial: selectedPatientType,
     };
+    console.log("datos a editar: ", data);
     axios
       .put("http://localhost:5000/actualizarNombre", data)
       .then((response) => {
@@ -130,15 +137,18 @@ const Agenda = () => {
     } else if (option === "B") {
       deleteAppointment();
     } else if (option === "C") {
-     // Copiar el nombre seleccionado al portapapeles
-     navigator.clipboard.writeText(selectedName).then(() => {
-      console.log("Nombre copiado al portapapeles:", selectedName);
-      deleteAppointment(selectedName);
-    }).catch((error) => {
-      console.error("Error al copiar al portapapeles:", error);
-      alert("Error al copiar al portapapeles");
-    });
-  }
+      // Copiar el nombre seleccionado al portapapeles
+      navigator.clipboard
+        .writeText(selectedName)
+        .then(() => {
+          console.log("Nombre copiado al portapapeles:", selectedName);
+          deleteAppointment(selectedName);
+        })
+        .catch((error) => {
+          console.error("Error al copiar al portapapeles:", error);
+          alert("Error al copiar al portapapeles");
+        });
+    }
   };
 
   const closeContextMenu = useCallback(() => {
@@ -179,22 +189,20 @@ const Agenda = () => {
 
     setTimeSlots(timeOptions);
   }, [selectedDate]);
-/////// USEEFECTS======================================================
-useEffect(() => {
-  // Contar la cantidad de nombres en la lista de citas
-  const count = appointments.length;
-  // Actualizar el estado con la nueva cantidad
-  setNamesCount(count);
-}, [appointments]);
-  
+  /////// USEEFECTS======================================================
+  useEffect(() => {
+    // Contar la cantidad de nombres en la lista de citas
+    const count = appointments.length;
+    // Actualizar el estado con la nueva cantidad
+    setNamesCount(count);
+  }, [appointments]);
 
   useEffect(() => {
     if (selectedDate) {
       generateTimeSlots();
       loadAppointments();
     }
-  }, [selectedDate, generateTimeSlots ]);
-
+  }, [selectedDate, generateTimeSlots]);
 
   useEffect(() => {
     generateTimeSlotsRef.current = generateTimeSlots;
@@ -202,9 +210,11 @@ useEffect(() => {
   const generateTimeSlotsRef = useRef(generateTimeSlots);
 
   //==================================================================
-  const handleNameClick = (name, time) => {
+  const handleNameClick = (name, time, patientType) => {
     setSelectedName(name);
     setSelectedTime(time);
+    setSelectedPatientType(patientType); // Establece el tipo de paciente seleccionado para edición
+     
   };
 
   const handleFormSubmit = (event) => {
@@ -230,7 +240,7 @@ useEffect(() => {
   };
 
   const ingresarPaciente = () => {
-    if (!selectedDate || !selectedTime || !patientName) {
+    if (!selectedDate || !selectedTime || !patientName || !patientType) {
       alert("Por favor seleccione una fecha, hora y nombre");
       return;
     }
@@ -239,8 +249,9 @@ useEffect(() => {
       fecha: formatDate(selectedDate),
       hora: selectedTime,
       nombre: patientName,
+      oSocial: patientType, // Agregar el tipo de paciente al objeto de datos
     };
-
+    console.log(data);
     axios
       .post("http://localhost:5000/guardarPaciente", data)
       .then((response) => {
@@ -248,6 +259,7 @@ useEffect(() => {
         setAppointments([...appointments, data]);
         setSelectedTime("");
         setPatientName("");
+        setPatientType(""); // Limpiar el tipo de paciente después de ingresar
       })
       .catch((error) => {
         console.error("Error al enviar los datos al backend:", error);
@@ -257,17 +269,19 @@ useEffect(() => {
 
   ///eliminar un paciente de la agenda ===================
   const deleteAppointment = () => {
-    if (!selectedName || !selectedTime) {
+    if (!selectedName || !selectedTime || !selectedPatientType) {
       alert("Por favor selecciona un elemento para eliminar.");
       return;
     }
-
+console.log("datos para eliminar: ", selectedName, selectedTime, selectedPatientType);
     const data = {
       fecha: formatDate(selectedDate),
       hora: selectedTime,
       nombre: selectedName,
+      oSocial:selectedPatientType,
+
     };
-    console.log(data);
+    console.log("datos para eliminar: ", data);
     axios
       .delete("http://localhost:5000/eliminarCita", { data })
       .then((response) => {
@@ -289,7 +303,8 @@ useEffect(() => {
           className="custom-calendar"
           tileClassName="custom-tile"
         />
-        <p>Pacientes agendados: {namesCount}</p> {/* Mostrar la cantidad de nombres */}
+        <p>Pacientes agendados: {namesCount}</p>{" "}
+        {/* Mostrar la cantidad de nombres */}
       </div>
       <div className="detail-container" style={{ marginLeft: "40px" }}>
         {selectedDate && (
@@ -328,6 +343,15 @@ useEffect(() => {
                   value={patientName}
                   onChange={handleInputChange}
                 />
+                <select
+                  value={patientType}
+                  onChange={(e) => setPatientType(e.target.value)}
+                >
+                  <option value="">Obra Social</option>
+                  <option value="Union Personal">Union Personal</option>
+                  <option value="OSDE">OSDE</option>
+                  <option value="Particular">Particular</option>
+                </select>
                 <button type="submit">Ingresar</button>
               </form>
             </div>
@@ -351,7 +375,8 @@ useEffect(() => {
                               e.stopPropagation(); // Evita que el clic se propague al contenedor y deseleccione el nombre
                               handleNameClick(
                                 appointment.nombre,
-                                appointment.hora
+                                appointment.hora,
+                                appointment.oSocial
                               );
                               setIsEditing(false); // Desactivar modo de edición al hacer clic en un elemento
                             }}
@@ -373,21 +398,27 @@ useEffect(() => {
                                 onBlur={() =>
                                   handleNameUpdate(
                                     appointment.hora,
-                                    patientName
+                                    patientName,
+                                    selectedPatientType
                                   )
                                 }
                                 onKeyUp={(e) => {
                                   if (e.key === "Enter") {
                                     handleNameUpdate(
                                       appointment.hora,
-                                      patientName
+                                      patientName,
+                                      selectedPatientType
                                     );
                                   }
                                 }}
                                 autoFocus // Enfoca automáticamente el campo de entrada al activar el modo de edición
                               />
                             ) : (
-                              <span>{appointment.nombre}</span>
+                              <>
+                                <span>{appointment.nombre}</span>
+                                <span>({appointment.oSocial})</span>{" "}
+                                {/* Mostrar el tipo de paciente */}
+                              </>
                             )}
                           </span>
                         )
