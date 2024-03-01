@@ -4,7 +4,9 @@ import "react-calendar/dist/Calendar.css";
 import axios from "axios";
 import "./CustomCalendar.css";
 import "./App.css"; // Importa el archivo de estilos CSS
+import "./Modal.css";
 
+//========================================================
 const Agenda = () => {
   const [selectedDate, setSelectedDate] = useState(null);
   const [selectedTime, setSelectedTime] = useState("");
@@ -19,12 +21,18 @@ const Agenda = () => {
   });
   const contextMenuRef = useRef(null);
   const [isEditing, setIsEditing] = useState(false);
-  const [namesCount, setNamesCount] = useState(0); // Estado para almacenar la cantidad de nombres
+  const [patientCounts, setPatientCounts] = useState({
+    "Union Personal": 0,
+    OSDE: 0,
+    Particular: 0,
+  }); // Estado para almacenar la cantidad de nombres y tipos de pacientes
   const [patientType, setPatientType] = useState("");
   const [selectedPatientType, setSelectedPatientType] = useState("");
-
-
-
+  const [isModalOpen, setIsModalOpen] = useState(false); // Estado para controlar la ventana modal
+  const [editedTime, setEditedTime] = useState("");
+  const [editedName, setEditedName] = useState(""); // Estado para el nombre editado en la ventana modal
+  const [editedPatientType, setEditedPatientType] = useState(""); // Estado para el tipo de paciente editado en la ventana modal
+  const [namesCount, setNamesCount] = useState(0);
   /*===============================================*/
   // Formatear la hora recibida del backend (hora en formato HH:MM:SS) a HH:MM
   const formatTime = (timeString) => {
@@ -40,6 +48,35 @@ const Agenda = () => {
       day < 10 ? "0" : ""
     }${day}`;
   };
+
+  const handleEditButtonClick = () => {
+    if (!editedName || !editedPatientType || !editedTime) {
+      alert("Por favor completa todos los campos");
+      return;
+    }
+
+    const data = {
+      fecha: formatDate(selectedDate),
+      hora: selectedTime,
+      nuevoNombre: editedName,
+      nuevaOsocial: editedPatientType,
+      nuevaHora: editedTime,
+    };
+    console.log(data);
+    axios
+      .put("http://localhost:5000/actualizarNombre", data)
+      .then((response) => {
+        console.log(response.data);
+        // Actualizar la lista de citas después de la actualización del nombre
+        loadAppointments(formatDate(selectedDate));
+        setIsModalOpen(false); // Cierra la ventana modal después de la actualización
+      })
+      .catch((error) => {
+        console.error("Error al actualizar el nombre:", error);
+        alert("Error al actualizar el nombre");
+      });
+  };
+
   const loadAppointments = useCallback(
     (fecha) => {
       if (!selectedDate) return; // Salir si no hay fecha seleccionada
@@ -53,6 +90,11 @@ const Agenda = () => {
           if (JSON.stringify(response.data) !== JSON.stringify(appointments)) {
             setAppointments(response.data);
             console.log("Citas cargadas:", response.data);
+
+            console.log(
+              "lista de nombres en appointments: ",
+              appointments.nombre
+            );
           }
         })
         .catch((error) => {
@@ -74,53 +116,8 @@ const Agenda = () => {
     [appointments, selectedDate]
   );
 
-  const handleNameUpdate = (selectedtime, newName, newPatientType) => {
-    if (!selectedName || !selectedDate || !selectedTime || !newName ) {
-      alert(
-        "Por favor seleccione una cita para editar y complete los campos requeridos"
-      );
-      console.log(
-        "SELECTEDNAME: ",
-        selectedName,
-        "SELECTEDTIME: ",
-        selectedTime,
-        "NEWNAME: ",
-        newName,
-        "SELECTEDDATE: ",
-        selectedDate
-      );
-      return;
-    }
-
-    const data = {
-      fecha: formatDate(selectedDate),
-      hora: selectedTime,
-      nuevoNombre: newName,
-      nuevaOsocial: selectedPatientType,
-    };
-    console.log("datos a editar: ", data);
-    axios
-      .put("http://localhost:5000/actualizarNombre", data)
-      .then((response) => {
-        console.log(response.data);
-        // Actualizar la lista de citas después de la actualización del nombre
-        loadAppointments(formatDate(selectedDate));
-        setPatientName("");
-        setIsEditing(false); // Desactivar el modo de edición después de la actualización
-      })
-      .catch((error) => {
-        console.error("Error al actualizar el nombre:", error);
-        alert("Error al actualizar el nombre");
-      });
-  };
   const handleDateClick = (date) => {
     setSelectedDate(date);
-    //setSelectedTime('');
-    // setPatientName('');
-    //generateTimeSlots(); // Regenerar los espacios horarios al cambiar la fecha
-  };
-  const handleInputChange = (event) => {
-    setPatientName(event.target.value);
   };
 
   const handleContextMenu = (event, name) => {
@@ -148,6 +145,9 @@ const Agenda = () => {
           console.error("Error al copiar al portapapeles:", error);
           alert("Error al copiar al portapapeles");
         });
+    } else if (option === "D") {
+      // Abre la ventana modal
+      setIsModalOpen(true);
     }
   };
 
@@ -190,17 +190,54 @@ const Agenda = () => {
     setTimeSlots(timeOptions);
   }, [selectedDate]);
   /////// USEEFECTS======================================================
+
   useEffect(() => {
-    // Contar la cantidad de nombres en la lista de citas
-    const count = appointments.length;
-    // Actualizar el estado con la nueva cantidad
-    setNamesCount(count);
+    // Si la modal está abierta y hay un nombre seleccionado, establece los valores iniciales
+    if (isModalOpen && selectedName) {
+      setContextMenuVisible(false);
+
+      setEditedName(selectedName);
+      setEditedPatientType(selectedPatientType);
+    }
+  }, [isModalOpen, selectedName, selectedPatientType]);
+
+  useEffect(() => {
+    const handleEscape = (event) => {
+      if (event.key === "Escape") {
+        setIsModalOpen(false);
+      }
+    };
+
+    document.addEventListener("keydown", handleEscape);
+
+    return () => {
+      document.removeEventListener("keydown", handleEscape);
+    };
+  }, []);
+
+  useEffect(() => {
+    // Contar la cantidad de nombres totales y la cantidad de cada tipo de paciente
+    let totalCount = 0;
+    const counts = {
+      "Union Personal": 0,
+      OSDE: 0,
+      Particular: 0,
+    };
+
+    appointments.forEach((appointment) => {
+      totalCount++;
+      counts[appointment.oSocial]++;
+    });
+
+    // Actualizar el estado con los nuevos conteos
+    setNamesCount(totalCount);
+    setPatientCounts(counts);
   }, [appointments]);
 
   useEffect(() => {
     if (selectedDate) {
       generateTimeSlots();
-      loadAppointments();
+      loadAppointments(formatDate(selectedDate));
     }
   }, [selectedDate, generateTimeSlots]);
 
@@ -214,7 +251,6 @@ const Agenda = () => {
     setSelectedName(name);
     setSelectedTime(time);
     setSelectedPatientType(patientType); // Establece el tipo de paciente seleccionado para edición
-     
   };
 
   const handleFormSubmit = (event) => {
@@ -273,13 +309,17 @@ const Agenda = () => {
       alert("Por favor selecciona un elemento para eliminar.");
       return;
     }
-console.log("datos para eliminar: ", selectedName, selectedTime, selectedPatientType);
+    console.log(
+      "datos para eliminar: ",
+      selectedName,
+      selectedTime,
+      selectedPatientType
+    );
     const data = {
       fecha: formatDate(selectedDate),
       hora: selectedTime,
       nombre: selectedName,
-      oSocial:selectedPatientType,
-
+      oSocial: selectedPatientType,
     };
     console.log("datos para eliminar: ", data);
     axios
@@ -298,13 +338,23 @@ console.log("datos para eliminar: ", selectedName, selectedTime, selectedPatient
   return (
     <div className="app-container" onClick={closeContextMenu}>
       <div className="calendar-container">
+        {/* Componente del calendario */}
         <Calendar
           onClickDay={handleDateClick}
           className="custom-calendar"
           tileClassName="custom-tile"
         />
-        <p>Pacientes agendados: {namesCount}</p>{" "}
-        {/* Mostrar la cantidad de nombres */}
+        <div>
+          <p>Pacientes agendados: {namesCount}</p>
+          <p>Obras sociales:</p>
+          <ul>
+            {Object.entries(patientCounts).map(([type, count]) => (
+              <li key={type}>
+                {type}: {count}
+              </li>
+            ))}
+          </ul>
+        </div>
       </div>
       <div className="detail-container" style={{ marginLeft: "40px" }}>
         {selectedDate && (
@@ -316,7 +366,7 @@ console.log("datos para eliminar: ", selectedName, selectedTime, selectedPatient
                 day: "numeric",
               })}
             </p>
-
+            {/* Formulario de ingreso de datos */}
             <div>
               <select
                 value={selectedTime}
@@ -341,7 +391,7 @@ console.log("datos para eliminar: ", selectedName, selectedTime, selectedPatient
                   type="text"
                   placeholder="Nombre del paciente"
                   value={patientName}
-                  onChange={handleInputChange}
+                  onChange={(e) => setPatientName(e.target.value)}
                 />
                 <select
                   value={patientType}
@@ -355,6 +405,7 @@ console.log("datos para eliminar: ", selectedName, selectedTime, selectedPatient
                 <button type="submit">Ingresar</button>
               </form>
             </div>
+            {/* Lista de nombres con opciones de edición y eliminación */}
             <div
               className="name-list-container"
               onClick={() => setSelectedName("")}
@@ -372,52 +423,36 @@ console.log("datos para eliminar: ", selectedName, selectedTime, selectedPatient
                               handleContextMenu(e, appointment.nombre)
                             }
                             onClick={(e) => {
-                              e.stopPropagation(); // Evita que el clic se propague al contenedor y deseleccione el nombre
+                              e.stopPropagation();
                               handleNameClick(
                                 appointment.nombre,
                                 appointment.hora,
                                 appointment.oSocial
                               );
-                              setIsEditing(false); // Desactivar modo de edición al hacer clic en un elemento
+                              setIsEditing(false);
                             }}
                             style={{
                               fontWeight:
-                                selectedName === appointment.nombre
+                                selectedName === appointment.nombre &&
+                                selectedTime === appointment.hora
                                   ? "bold"
                                   : "normal",
                               cursor: "pointer",
                             }}
                           >
-                            {/* Renderizar el campo de entrada si se está editando el elemento */}
                             {isEditing &&
-                            selectedName === appointment.nombre ? (
+                            selectedName === appointment.nombre &&
+                            selectedTime === appointment.hora ? (
                               <input
                                 type="text"
-                                value={patientName || appointment.nombre} // Utiliza patientName si está definido, de lo contrario, utiliza el nombre actual del appointment
-                                onChange={(e) => setPatientName(e.target.value)}
-                                onBlur={() =>
-                                  handleNameUpdate(
-                                    appointment.hora,
-                                    patientName,
-                                    selectedPatientType
-                                  )
-                                }
-                                onKeyUp={(e) => {
-                                  if (e.key === "Enter") {
-                                    handleNameUpdate(
-                                      appointment.hora,
-                                      patientName,
-                                      selectedPatientType
-                                    );
-                                  }
-                                }}
-                                autoFocus // Enfoca automáticamente el campo de entrada al activar el modo de edición
+                                value={editedName}
+                                onChange={(e) => setEditedName(e.target.value)}
+                                autoFocus
                               />
                             ) : (
                               <>
                                 <span>{appointment.nombre}</span>
-                                <span>({appointment.oSocial})</span>{" "}
-                                {/* Mostrar el tipo de paciente */}
+                                <span>({appointment.oSocial})</span>
                               </>
                             )}
                           </span>
@@ -427,6 +462,7 @@ console.log("datos para eliminar: ", selectedName, selectedTime, selectedPatient
                 ))}
               </ul>
             </div>
+            {/* Menú contextual */}
             {contextMenuVisible && (
               <div
                 ref={contextMenuRef}
@@ -435,22 +471,77 @@ console.log("datos para eliminar: ", selectedName, selectedTime, selectedPatient
                   top: contextMenuPosition.y,
                   left: contextMenuPosition.x,
                 }}
-                onClick={(e) => e.stopPropagation()} // Prevent closing when clicked inside
+                onClick={(e) => e.stopPropagation()}
               >
                 <div onClick={() => handleContextMenuOptionClick("A")}>
-                  editar
+                  Editar
                 </div>
                 <div onClick={() => handleContextMenuOptionClick("B")}>
-                  eliminar
+                  Eliminar
                 </div>
                 <div onClick={() => handleContextMenuOptionClick("C")}>
                   Option C
                 </div>
+                <div onClick={() => setIsModalOpen(true)}>Editar (Modal)</div>
               </div>
             )}
           </div>
         )}
       </div>
+      {/* Ventana modal para editar nombres */}
+      {isModalOpen && (
+        <div className="modal">
+          <div className="modal-content">
+            <span className="close" onClick={() => setIsModalOpen(false)}>
+              &times;
+            </span>
+            <h2>Editar Nombre</h2>
+            <form>
+              <select
+                value={selectedTime}
+                onChange={(e) => setEditedTime(e.target.value)}
+              >
+                <option value="">Horarios</option>
+                {timeSlots.map((timeOption, index) => {
+                  const isTimeSlotAvailable = appointments.every(
+                    (appointment) => formatTime(appointment.hora) !== timeOption
+                  );
+                  return (
+                    isTimeSlotAvailable && (
+                      <option key={index} value={timeOption}>
+                        {timeOption}
+                      </option>
+                    )
+                  );
+                })}
+              </select>
+              <label>
+                Nombre:
+                <input
+                  type="text"
+                  value={editedName}
+                  onChange={(e) => setEditedName(e.target.value)}
+                />
+              </label>
+              <label>
+                Tipo de Paciente:
+                <select
+                  value={editedPatientType}
+                  onChange={(e) => setEditedPatientType(e.target.value)}
+                >
+                  <option value="">Seleccionar</option>
+                  <option value="Union Personal">Union Personal</option>
+                  <option value="OSDE">OSDE</option>
+                  <option value="Particular">Particular</option>
+                </select>
+              </label>
+              <button type="button" onClick={handleEditButtonClick}>
+                Editar
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

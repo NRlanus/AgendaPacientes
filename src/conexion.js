@@ -224,13 +224,13 @@ app.get('/getCitas/:fecha', (req, res) => {
 
 // Ruta para actualizar el nombre de la cita
 app.put('/actualizarNombre', (req, res) => {
-  const { fecha, hora, nuevoNombre, nuevaOsocial } = req.body;
-console.log(fecha, hora, nuevoNombre,nuevaOsocial)
+  const { fecha, hora, nuevoNombre, nuevaOsocial, nuevaHora } = req.body;
+console.log(fecha, hora, nuevoNombre,nuevaOsocial, nuevaHora)
   // Consulta SQL para actualizar el nombre de la cita
-  const sql = `UPDATE a2024 SET nombre = ?, hora = ?, oSocial = ? WHERE fecha = ?`;
+  const sql = `UPDATE a2024 SET nombre = ?, oSocial = ?, hora = ? WHERE fecha = ? AND hora= ?`;
 
   // Ejecutar la consulta SQL con los parámetros
-  connection.query(sql, [nuevoNombre, hora, nuevaOsocial, fecha], (err, result) => {
+  connection.query(sql, [nuevoNombre,  nuevaOsocial, nuevaHora, fecha, hora], (err, result) => {
     if (err) {
       console.error('Error al actualizar el nombre de la cita:', err);
       res.status(500).send('Error al actualizar el nombre de la cita');
