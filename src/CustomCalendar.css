@@ -2,6 +2,8 @@
 .custom-calendar {
   width: 400px; /* Ancho personalizado */
   height: 300px; /* Alto personalizado */
+  
+  
 }
 
 .react-calendar__month-view__weekdays__weekday {
@@ -47,5 +49,25 @@
 }
  
 .calendar-container {
-  margin-top: 80px; /* Ajusta el valor según sea necesario */
+  margin-top: 5%; /* Ajusta el valor según sea necesario */
+  margin-left: 2%;
+  
+}
+
+/*Calendario*/
+.react-calendar {
+  border-radius: 20px; /* Ajusta el radio de borde para hacerlo más redondeado */
+  box-shadow: 0 2px 4px rgba(45, 42, 230, 0.1); /* Agrega una sombra para resaltar el calendario */
+  background-color:#F0F0F0;
+  box-shadow: -8px -5px 8px rgba(0, 0, 0, 0.2); /* Sombra difusa con un desplazamiento de 0px en horizontal, 4px en vertical, propagación de 6px y color RGBA */
+  
+}
+
+.react-calendar__tile {
+  border-radius: 10px; /* Ajusta el radio de borde para hacer las celdas más redondeadas */
+  
+}
+
+.react-calendar__tile--active {
+  background-color: #e0e0e0; /* Cambia el color de fondo de las celdas activas */
 }

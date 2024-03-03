@@ -33,6 +33,8 @@ const Agenda = () => {
   const [editedName, setEditedName] = useState(""); // Estado para el nombre editado en la ventana modal
   const [editedPatientType, setEditedPatientType] = useState(""); // Estado para el tipo de paciente editado en la ventana modal
   const [namesCount, setNamesCount] = useState(0);
+  const [nameStrikethrough, setNameStrikethrough] = useState({}); // Estado para mantener un registro de nombres tachados
+
   /*===============================================*/
   // Formatear la hora recibida del backend (hora en formato HH:MM:SS) a HH:MM
   const formatTime = (timeString) => {
@@ -50,18 +52,25 @@ const Agenda = () => {
   };
 
   const handleEditButtonClick = () => {
-    if (!editedName || !editedPatientType || !editedTime) {
+    if (!editedName || !editedPatientType || (!selectedTime && !editedTime)) {
       alert("Por favor completa todos los campos");
       return;
     }
-
+    console.log(
+      "handleEditButtonClick: selectedTime ",
+      selectedTime,
+      "editedTime: ",
+      editedTime
+    );
+    const horaSeleccionada = editedTime || selectedTime;
     const data = {
       fecha: formatDate(selectedDate),
       hora: selectedTime,
       nuevoNombre: editedName,
       nuevaOsocial: editedPatientType,
-      nuevaHora: editedTime,
+      nuevaHora: horaSeleccionada,
     };
+
     console.log(data);
     axios
       .put("http://localhost:5000/actualizarNombre", data)
@@ -69,6 +78,8 @@ const Agenda = () => {
         console.log(response.data);
         // Actualizar la lista de citas después de la actualización del nombre
         loadAppointments(formatDate(selectedDate));
+        setEditedTime("");
+        setSelectedTime("");
         setIsModalOpen(false); // Cierra la ventana modal después de la actualización
       })
       .catch((error) => {
@@ -129,22 +140,22 @@ const Agenda = () => {
 
   const handleContextMenuOptionClick = (option) => {
     setContextMenuVisible(false);
-    if (option === "A") {
+    if (option === "C") {
       setIsEditing(true);
     } else if (option === "B") {
-      deleteAppointment();
-    } else if (option === "C") {
-      // Copiar el nombre seleccionado al portapapeles
-      navigator.clipboard
-        .writeText(selectedName)
-        .then(() => {
-          console.log("Nombre copiado al portapapeles:", selectedName);
-          deleteAppointment(selectedName);
-        })
-        .catch((error) => {
-          console.error("Error al copiar al portapapeles:", error);
-          alert("Error al copiar al portapapeles");
-        });
+      const isConfirmed = window.confirm(
+        "¿Estás seguro de que deseas eliminar esta cita?"
+      );
+      if (isConfirmed) {
+        deleteAppointment();
+      }
+    } else if (option === "E") {
+      // Tachar o destachar el nombre seleccionado
+      const isStruckThrough = nameStrikethrough[selectedName];
+      setNameStrikethrough({
+        ...nameStrikethrough,
+        [selectedName]: !isStruckThrough,
+      });
     } else if (option === "D") {
       // Abre la ventana modal
       setIsModalOpen(true);
@@ -186,7 +197,7 @@ const Agenda = () => {
         currentTime.setMinutes(currentTime.getMinutes() + 5); // Agrega 5 minutos para otros intervalos
       }
     }
-
+    console.log(timeOptions);
     setTimeSlots(timeOptions);
   }, [selectedDate]);
   /////// USEEFECTS======================================================
@@ -246,11 +257,25 @@ const Agenda = () => {
   });
   const generateTimeSlotsRef = useRef(generateTimeSlots);
 
+  useEffect(() => {
+    // Registro de consola para verificar el valor inicial de selectedTime
+
+    console.log("Valor actualizado de selectedTime:", selectedTime);
+  }, [selectedTime]);
+
   //==================================================================
-  const handleNameClick = (name, time, patientType) => {
+  const handleNameClick = (name, time, patientType, editedTime) => {
+    console.log("Valor de time en handleNameClick:", time);
     setSelectedName(name);
     setSelectedTime(time);
     setSelectedPatientType(patientType); // Establece el tipo de paciente seleccionado para edición
+
+    console.log(
+      "Hora despues del handleNameClick  selectedTime: ",
+      selectedTime,
+      selectedName,
+      selectedPatientType
+    );
   };
 
   const handleFormSubmit = (event) => {
@@ -412,32 +437,43 @@ const Agenda = () => {
             >
               <ul className="time-list">
                 {timeSlots.map((timeSlot, index) => (
-                  <li key={index}>
-                    <span>{timeSlot}</span>
+                  <ul key={index} className="agendados">
+                    <span className = "time">{timeSlot}</span>
                     {appointments.map(
                       (appointment, appIndex) =>
                         formatTime(appointment.hora) === timeSlot && (
                           <span
                             key={appIndex}
                             onContextMenu={(e) =>
+                              selectedName === appointment.nombre &&
                               handleContextMenu(e, appointment.nombre)
                             }
                             onClick={(e) => {
                               e.stopPropagation();
                               handleNameClick(
                                 appointment.nombre,
-                                appointment.hora,
+                                formatTime(appointment.hora),
                                 appointment.oSocial
                               );
-                              setIsEditing(false);
+                            }}
+                            onMouseEnter={(e) => {
+                              // Abre el menú contextual si hay un nombre seleccionado y el mouse está sobre ese nombre solamente
+                              if (selectedName === appointment.nombre) {
+                                handleContextMenu(e, appointment.nombre);
+                              }
                             }}
                             style={{
                               fontWeight:
                                 selectedName === appointment.nombre &&
-                                selectedTime === appointment.hora
+                                selectedTime === formatTime(appointment.hora)
                                   ? "bold"
                                   : "normal",
                               cursor: "pointer",
+                              textDecoration: nameStrikethrough[
+                                appointment.nombre
+                              ]
+                                ? "line-through"
+                                : "none",
                             }}
                           >
                             {isEditing &&
@@ -458,12 +494,12 @@ const Agenda = () => {
                           </span>
                         )
                     )}
-                  </li>
+                  </ul>
                 ))}
               </ul>
             </div>
             {/* Menú contextual */}
-            {contextMenuVisible && (
+            {contextMenuVisible && selectedName && (
               <div
                 ref={contextMenuRef}
                 className="context-menu"
@@ -473,16 +509,13 @@ const Agenda = () => {
                 }}
                 onClick={(e) => e.stopPropagation()}
               >
-                <div onClick={() => handleContextMenuOptionClick("A")}>
-                  Editar
+                <div onClick={() => setIsModalOpen(true)}>Editar</div>
+                <div onClick={() => handleContextMenuOptionClick("E")}>
+                  Tachar
                 </div>
                 <div onClick={() => handleContextMenuOptionClick("B")}>
                   Eliminar
                 </div>
-                <div onClick={() => handleContextMenuOptionClick("C")}>
-                  Option C
-                </div>
-                <div onClick={() => setIsModalOpen(true)}>Editar (Modal)</div>
               </div>
             )}
           </div>
@@ -498,10 +531,10 @@ const Agenda = () => {
             <h2>Editar Nombre</h2>
             <form>
               <select
-                value={selectedTime}
+                value={editedTime || selectedTime}
                 onChange={(e) => setEditedTime(e.target.value)}
               >
-                <option value="">Horarios</option>
+                <option value="">{selectedTime}</option>
                 {timeSlots.map((timeOption, index) => {
                   const isTimeSlotAvailable = appointments.every(
                     (appointment) => formatTime(appointment.hora) !== timeOption
