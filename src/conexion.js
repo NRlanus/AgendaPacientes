@@ -8,7 +8,7 @@ const bodyParser = require('body-parser');
 const app = express();
 app.use(express.json());
 app.use(bodyParser.json());
-app.use(cors({ origin: 'http://localhost:3000' }));
+app.use(cors({ origin: '161.97.124.87' }));
 
 const fechaHora = (fecha, hora) =>{
   const fechaHora = new Date(`${fecha}T${hora}:00`);
@@ -17,10 +17,10 @@ const fechaHora = (fecha, hora) =>{
 
 // Configuración de la conexión a la base de datos MySQL
 const connection = mysql.createConnection({
-  host: 'localhost',
-  user: 'root',
-  password: 'Admin1234',
-  database: 'listapacientes'
+  host: '161.97.124.87',
+  user: 'doctorci',
+  password: 'LqX93dC*Jt7l4!',
+  database: '´doctorci_consultorio'
 });
 
 // Conectar a la base de datos MySQL

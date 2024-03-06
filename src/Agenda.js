@@ -8,6 +8,9 @@ import "./Modal.css";
 
 //========================================================
 const Agenda = () => {
+  //const url = 'http://localhost:5000/';
+  const url = '161.97.124.87';
+
   const [selectedDate, setSelectedDate] = useState(null);
   const [selectedTime, setSelectedTime] = useState("");
   const [patientName, setPatientName] = useState("");
@@ -74,7 +77,7 @@ const [selectedPkID, setSelectedPkID] = useState("");
 
     console.log(data);
     axios
-      .put("http://localhost:5000/actualizarNombre", data)
+      .put(url,'actualizarNombre', data)
       .then((response) => {
         console.log(response.data);
         // Actualizar la lista de citas después de la actualización del nombre
@@ -97,7 +100,7 @@ const [selectedPkID, setSelectedPkID] = useState("");
       const formattedDate = formatDate(selectedDate);
 
       axios
-        .get(`http://localhost:5000/getCitas/${formattedDate}`)
+        .get(url,`getCitas/${formattedDate}`)
         .then((response) => {
           // Verificar si las citas son diferentes antes de actualizar el estado
           if (JSON.stringify(response.data) !== JSON.stringify(appointments)) {
@@ -320,7 +323,7 @@ const [selectedPkID, setSelectedPkID] = useState("");
     };
     console.log(data);
     axios
-      .post("http://localhost:5000/guardarPaciente", data)
+      .post(url,'guardarPaciente', data)
       .then((response) => {
         console.log(response.data);
         setAppointments([...appointments, {pkID:response.data.pkID, ...data}]);
@@ -356,7 +359,7 @@ const [selectedPkID, setSelectedPkID] = useState("");
   };
     console.log("datos para eliminar: ", data);
     axios
-      .delete("http://localhost:5000/eliminarCita", { data })
+      .delete(url,'eliminarCita', { data })
       .then((response) => {
         console.log(response.data);
         // Actualiza la lista de citas después de eliminar el elemento
