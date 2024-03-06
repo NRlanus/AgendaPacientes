@@ -10,6 +10,10 @@ app.use(express.json());
 app.use(bodyParser.json());
 app.use(cors({ origin: 'http://localhost:3000' }));
 
+const fechaHora = (fecha, hora) =>{
+  const fechaHora = new Date(`${fecha}T${hora}:00`);
+   return fechaHora.toISOString().slice(0, 19).replace('T', ' ');
+  };
 
 // Configuración de la conexión a la base de datos MySQL
 const connection = mysql.createConnection({
@@ -159,7 +163,9 @@ const createTableQuery = `
     CREATE TABLE IF NOT EXISTS A2024 (
       fecha DATE,
       hora TIME,
-      nombre VARCHAR(255)
+      nombre VARCHAR(255),
+      PRIMARY KEY(fecha, hora)
+
     )
   `;
   connection.query(createTableQuery, (error, results) => {
@@ -173,17 +179,16 @@ const createTableQuery = `
 
 // Ruta para guardar un nuevo paciente
 app.post('/guardarPaciente', (req, res) => {
-  const { fecha, hora, nombre,oSocial } = req.body;
-  console.log("fecha hora y nombre en guardarPaciente: ", fecha, hora, nombre,oSocial);
-  const [dia, mes, año] = fecha.split('/');
- 
+  const { fecha, hora, nombre,oSocial } = req.body;   
+  const pkID =fechaHora(fecha,hora);
+  
   // Insertar el paciente en la tabla A2024
   const insertQuery = `
-    INSERT INTO A2024 (fecha, hora, nombre, oSocial)
-    VALUES (?, ?, ?, ?)
+    INSERT INTO A2024 (pkID, fecha, hora, nombre, oSocial)
+    VALUES (?, ?, ?, ?, ?)
   `;
 
-  connection.query(insertQuery, [fecha , hora, nombre,oSocial], (error, results) => {
+  connection.query(insertQuery, [pkID, fecha , hora, nombre,oSocial], (error, results) => {
     if (error) {
       console.error('Error al guardar el paciente:', error);
       res.status(500).json({ error: 'Error al guardar el paciente' });
@@ -200,7 +205,7 @@ app.get('/getCitas/:fecha', (req, res) => {
   const fecha = req.params.fecha;
 
   const query = `
-    SELECT hora, nombre, oSocial FROM A2024 
+    SELECT pkID, hora, nombre, oSocial FROM A2024 
     WHERE fecha = ? 
     ORDER BY hora
   `;
@@ -244,10 +249,10 @@ console.log(fecha, hora, nuevoNombre,nuevaOsocial, nuevaHora)
 
 //ELIMINAR UN NOMBRE DE LA AGENDA=========================
 app.delete('/eliminarCita', (req, res) => {
-  const { fecha, hora, nombre, oSocial } = req.body;
-console.log(fecha, hora, nombre, oSocial);
-  const sql = `DELETE FROM a2024 WHERE fecha = ? AND hora = ? AND nombre = ? And oSocial = ?`;
-  connection.query(sql, [fecha, hora, nombre, oSocial], (err, result) => {
+  const pkID= fechaHora(req.body.fecha, req.body.hora);
+console.log(pkID);
+  const sql = `DELETE FROM a2024 WHERE pkID = ?`;
+  connection.query(sql, [pkID], (err, result) => {
     if (err) {
       console.error('Error al eliminar la cita:', err);
       res.status(500).json({ error: 'Error al eliminar la cita' });

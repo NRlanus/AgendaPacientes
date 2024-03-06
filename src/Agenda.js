@@ -34,7 +34,7 @@ const Agenda = () => {
   const [editedPatientType, setEditedPatientType] = useState(""); // Estado para el tipo de paciente editado en la ventana modal
   const [namesCount, setNamesCount] = useState(0);
   const [nameStrikethrough, setNameStrikethrough] = useState({}); // Estado para mantener un registro de nombres tachados
-
+const [selectedPkID, setSelectedPkID] = useState("");
   /*===============================================*/
   // Formatear la hora recibida del backend (hora en formato HH:MM:SS) a HH:MM
   const formatTime = (timeString) => {
@@ -64,6 +64,7 @@ const Agenda = () => {
     );
     const horaSeleccionada = editedTime || selectedTime;
     const data = {
+      pkID: selectedPkID,
       fecha: formatDate(selectedDate),
       hora: selectedTime,
       nuevoNombre: editedName,
@@ -80,6 +81,7 @@ const Agenda = () => {
         loadAppointments(formatDate(selectedDate));
         setEditedTime("");
         setSelectedTime("");
+        setSelectedPkID("");
         setIsModalOpen(false); // Cierra la ventana modal después de la actualización
       })
       .catch((error) => {
@@ -131,11 +133,13 @@ const Agenda = () => {
     setSelectedDate(date);
   };
 
-  const handleContextMenu = (event, name) => {
+  const handleContextMenu = (event, name, pkID) => {
     event.preventDefault();
+    setSelectedPkID(pkID);
     setSelectedName(name);
     setContextMenuPosition({ x: event.clientX, y: event.clientY });
     setContextMenuVisible(true);
+    console.log("PKID EN HANDLECONTEXTMENU: ", pkID);
   };
 
   const handleContextMenuOptionClick = (option) => {
@@ -264,8 +268,10 @@ const Agenda = () => {
   }, [selectedTime]);
 
   //==================================================================
-  const handleNameClick = (name, time, patientType, editedTime) => {
+  const handleNameClick = (pkID, name, time, patientType, editedTime) => {
     console.log("Valor de time en handleNameClick:", time);
+    console.log("PKID EN HANLDENAMECLICK: ", pkID);
+    setSelectedPkID(pkID);
     setSelectedName(name);
     setSelectedTime(time);
     setSelectedPatientType(patientType); // Establece el tipo de paciente seleccionado para edición
@@ -317,7 +323,9 @@ const Agenda = () => {
       .post("http://localhost:5000/guardarPaciente", data)
       .then((response) => {
         console.log(response.data);
-        setAppointments([...appointments, data]);
+        setAppointments([...appointments, {pkID:response.data.pkID, ...data}]);
+        //setAppointments(response.data);
+        setSelectedPkID("");
         setSelectedTime("");
         setPatientName("");
         setPatientType(""); // Limpiar el tipo de paciente después de ingresar
@@ -330,22 +338,22 @@ const Agenda = () => {
 
   ///eliminar un paciente de la agenda ===================
   const deleteAppointment = () => {
+    //if (!selectedPkID) {
     if (!selectedName || !selectedTime || !selectedPatientType) {
       alert("Por favor selecciona un elemento para eliminar.");
       return;
     }
     console.log(
       "datos para eliminar: ",
+      selectedPkID,
       selectedName,
       selectedTime,
       selectedPatientType
     );
     const data = {
-      fecha: formatDate(selectedDate),
-      hora: selectedTime,
-      nombre: selectedName,
-      oSocial: selectedPatientType,
-    };
+    fecha: formatDate(selectedDate),
+    hora: selectedTime  
+  };
     console.log("datos para eliminar: ", data);
     axios
       .delete("http://localhost:5000/eliminarCita", { data })
@@ -451,6 +459,7 @@ const Agenda = () => {
                             onClick={(e) => {
                               e.stopPropagation();
                               handleNameClick(
+                                appointment.pkID,
                                 appointment.nombre,
                                 formatTime(appointment.hora),
                                 appointment.oSocial
@@ -459,7 +468,7 @@ const Agenda = () => {
                             onMouseEnter={(e) => {
                               // Abre el menú contextual si hay un nombre seleccionado y el mouse está sobre ese nombre solamente
                               if (selectedName === appointment.nombre) {
-                                handleContextMenu(e, appointment.nombre);
+                                handleContextMenu(e, appointment.nombre, appointment.pkID);
                               }
                             }}
                             style={{
